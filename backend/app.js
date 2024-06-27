@@ -3,6 +3,9 @@ const app = express();
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
+const bookRoutes = require('./routes/bookRoutes');
+const userRoutes = require('./routes/userRoutes');
+
 // const stuffRoutes = require('./routes/stuff');
 
 // mongoose.connect('mongodb+srv://emelinefarget:tR6nHzc4LWfiPc4i@coursp7.4ucxtzr.mongodb.net/?retryWrites=true&w=majority&appName=CoursP7',
@@ -21,6 +24,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/api/auth', userRoutes);
+// app.use('/api/books', bookRoutes);
 // app.use('/api/stuff', stuffRoutes);
 
 module.exports = app;
