@@ -6,9 +6,7 @@ const bodyParser = require('body-parser');
 const bookRoutes = require('./routes/bookRoutes');
 const userRoutes = require('./routes/userRoutes');
 
-// const stuffRoutes = require('./routes/stuff');
-
-// mongoose.connect('mongodb+srv://emelinefarget:tR6nHzc4LWfiPc4i@coursp7.4ucxtzr.mongodb.net/?retryWrites=true&w=majority&appName=CoursP7',
+// mongoose.connect('mongodb+srv://:@',
 //   { useNewUrlParser: true,
 //     useUnifiedTopology: true }) 
 //   .then(() => console.log('Connexion à MongoDB réussie !'))
@@ -25,7 +23,6 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/auth', userRoutes);
-// app.use('/api/books', bookRoutes);
-// app.use('/api/stuff', stuffRoutes);
+app.use('/api/books', bookRoutes);
 
 module.exports = app;
