@@ -132,3 +132,4 @@ dist
 
 # Variables d'environnement
 .env
+playground-1.mongodb.js
