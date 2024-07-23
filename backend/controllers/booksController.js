@@ -1,4 +1,4 @@
-const book = require('../models/bookModel');
+const Book = require('../models/bookModel');
 const fs = require('fs');
 
 
@@ -6,7 +6,7 @@ const fs = require('fs');
 
 exports.getAllBooks = (req, res, next) => {
     //Le but est ici de renvoyer un tableau avec tous les livres de la base de données
-    book.find()
+    Book.find()
     .then(
         (books) => { res.status(200).json(books) }
     )
@@ -18,6 +18,7 @@ exports.getAllBooks = (req, res, next) => {
 
 exports.createBook = (req, res, next) => {
     //-On stocke la requête demandée sous format JSON
+    console.log('createBook', req.body.book, req.file.filename);
     const bookObject = JSON.parse(req.body.book);
     //-On supprime le mauvais _id venant du front
     delete bookObject._id;
@@ -28,7 +29,8 @@ exports.createBook = (req, res, next) => {
         ...bookObject,
         userId: req.auth.userId,
         imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
-        //Il manque la note du livre
+        rating: [],
+        averageRating: 0,
     });
     //-On enregistre le livre créé dans la base de données
     book.save()
@@ -40,7 +42,36 @@ exports.createBook = (req, res, next) => {
 //- GET : Récupération d'un livre
 
 exports.getOneBook = (req, res, next) => {
-    book.findOne({ _id: req.params.id })
+    Book.findOne({ _id: req.params.id })
     .then(book => res.status(200).json(book))
     .catch(error => res.status(404).json({ error }));
 };
+
+
+//- PUT : Modification d'un livre
+
+exports.modifyBook = (req, res, next) => {
+    const bookObject = req.file ? {
+        //On stocke une nouvelle fois la requête demandée au format JSON
+      ...JSON.parse(req.body.book),
+      imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
+    } : { ...req.body };
+
+    delete bookObject._userId;
+    //On recherche le livre demandé dans la base de données à l'aide de son ID
+    Book.findOne({_id: req.params.id})
+    .then((book) => {
+    //On vérifie les autorisations de l'utilisateur connecté pour savoir si il peut modifier le livre choisi
+      if (book.userId != req.auth.userId) {
+        res.status(401).json({ message: 'Requête non autorisée !' });
+      } else {
+        //Une fois les autorisations vérifiées, on sauvegarde les nouvelles informations du livre
+          Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
+          .then(() => res.status(200).json({message: 'Livre modifié avec succès !'}))
+          .catch(error => res.status(401).json({ error }));
+      }
+    })
+    .catch((error) => {
+      res.status(400).json({ error });
+    })
+  };
