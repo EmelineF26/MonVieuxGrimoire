@@ -5,7 +5,7 @@ const fs = require('fs');
 //- GET : Récupération de tous les livres
 
 exports.getAllBooks = (req, res, next) => {
-    //Le but est ici de renvoyer un tableau avec tous les livres de la base de données
+    //-Le but est ici de renvoyer un tableau avec tous les livres de la base de données
     Book.find()
     .then(
         (books) => { res.status(200).json(books) }
@@ -17,6 +17,10 @@ exports.getAllBooks = (req, res, next) => {
 //- POST : Création d'un livre
 
 exports.createBook = (req, res, next) => {
+  //console.log(req.body.book);
+  if (!req.body.book || req.body.book === undefined || req.file === undefined) {
+    return res.status(400).json({ error: "Les données du livre ne sont pas valides" });
+  }
     //-On stocke la requête demandée sous format JSON
     const bookObject = JSON.parse(req.body.book);
     //-On supprime le mauvais _id venant du front
@@ -57,21 +61,24 @@ exports.getOneBook = (req, res, next) => {
 //- PUT : Modification d'un livre
 
 exports.modifyBook = (req, res, next) => {
+  if (req.body.book === undefined && req.file === undefined && Object.keys(req.body).length === 0) {
+    return res.status(400).json({ error:"Les modifications ne sont pas valides" });
+  }
     const bookObject = req.file ? {
-        //On stocke une nouvelle fois la requête demandée au format JSON
-      ...JSON.parse(req.body.book),
+      //-On stocke une nouvelle fois la requête demandée au format JSON
+      ...JSON.parse(req.body.book || "{}"),
       imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
     } : { ...req.body };
 
     delete bookObject._userId;
-    //On recherche le livre demandé dans la base de données à l'aide de son ID
+    //-On recherche le livre demandé dans la base de données à l'aide de son ID
     Book.findOne({_id: req.params.id})
     .then((book) => {
     //On vérifie que le livre existe bien dans la base de données
       if (!book) {
         return res.status(404).json({ message: 'Livre non trouvé !' });
       }
-    //Si le livre existe bien, on vérifie les autorisations de l'utilisateur connecté pour savoir si il peut modifier le livre choisi
+    //-Si le livre existe bien, on vérifie les autorisations de l'utilisateur connecté pour savoir si il peut modifier le livre choisi
       if (book.userId != req.auth.userId) {
         return res.status(401).json({ message: 'Requête non autorisée !' });
       }
@@ -89,16 +96,16 @@ exports.modifyBook = (req, res, next) => {
 //- DELETE : Supression d'un livre
 
 exports.deleteBook = (req, res, next) => {
-    //On recherche à nouveau le livre demandé dans la base de données à l'aide de son ID
+    //-On recherche à nouveau le livre demandé dans la base de données à l'aide de son ID
     Book.findOne({ _id: req.params.id})
     .then(book => {
-        //On vérifie les autorisations de l'utilisateur connecté pour savoir si il peut supprimer le livre choisi
+        //-On vérifie les autorisations de l'utilisateur connecté pour savoir si il peut supprimer le livre choisi
         if (book.userId != req.auth.userId) {
           res.status(403).json({message: 'Requête non autorisée !'});
         } else {
           const filename = book.imageUrl.split('/images/')[1];
           fs.unlink(`images/${filename}`, () => {
-            //Une fois les autorisations vérifiées, on supprime le livre
+            //-Une fois les autorisations vérifiées, on supprime le livre
             Book.deleteOne({_id: req.params.id})
             .then(() => {res.status(200).json({message: 'Livre supprimé avec succès !'})})
             .catch(error => res.status(400).json({ error: "Impossible de supprimer ce livre" }));
@@ -119,7 +126,7 @@ exports.bestRatings = (req, res, next) => {
     .limit(3)
     .then((books) => {
       if (books.length === 0) {
-        //Si on a pas de livres dans la base de données, on renvoie une erreur 400
+        //-Si on a pas de livres dans la base de données, on renvoie une erreur 400
         return res.status(400).json({ error: "Aucun livre trouvé" });
       }
       res.status(200).json(books);
@@ -133,7 +140,8 @@ exports.bestRatings = (req, res, next) => {
 exports.bookRating = (req, res) => {
   const { rating, userId } = req.body;
 
-  if (!rating || rating < 1 || rating > 5 || !Number.isInteger(rating)) {
+  //console.log(rating);
+  if (rating < 0 || rating > 5 || !Number.isInteger(rating)) {
     return res.status(400).json({ error: "La note n'est pas valide" });
   }
 
@@ -141,22 +149,22 @@ exports.bookRating = (req, res) => {
     if (!book) {
       res.status(404).json({error: "Aucun livre n'a été trouvé"})
     }
-    //On ajoute la note à l'array rating
+    //-On ajoute la note à l'array rating
     else {
       book.ratings.push({
         grade: rating,
         userId: req.auth.userId,
       });
     }
-    //On calcule la somme des notes, puis de la moyenne
+    //-On calcule la somme des notes, puis de la moyenne
     const totalRatings = book.ratings.length;
     const sumRatings = book.ratings.reduce((sum, rating) => sum + rating.grade, 0);
     const averageRating = sumRatings / totalRatings;
 
-    //On met à jour la moyenne des notes dans le livre
+    //-On met à jour la moyenne des notes dans le livre
     book.averageRating = averageRating;
 
-    //On sauvegarde les modifications dans la base de données
+    //-On sauvegarde les modifications dans la base de données
     book.save().then((updatedBook) => {
       res.status(200).json(updatedBook);
     }).catch((error) => {
