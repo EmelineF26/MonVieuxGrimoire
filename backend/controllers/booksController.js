@@ -1,5 +1,6 @@
 const Book = require('../models/bookModel');
 const fs = require('fs');
+const path = require('path');
 
 
 //- GET : Récupération de tous les livres
@@ -32,8 +33,6 @@ exports.createBook = (req, res, next) => {
         ...bookObject,
         userId: req.auth.userId,
         imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
-        rating: [],
-        averageRating: 0,
     });
     //-On enregistre le livre créé dans la base de données
     book.save()
@@ -83,9 +82,12 @@ exports.modifyBook = (req, res, next) => {
         return res.status(401).json({ message: 'Requête non autorisée !' });
       }
         //Une fois les autorisations vérifiées, on sauvegarde les nouvelles informations du livre
-          Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
-          .then(() => res.status(200).json({message: 'Livre modifié avec succès !'}))
-          .catch(error => res.status(400).json({ error }));
+          const filename = book.imageUrl.split('/images/')[1];
+          fs.unlink(`images/${filename}`, () => {
+            Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
+            .then(() => res.status(200).json({message: 'Livre modifié avec succès !'}))
+            .catch(error => res.status(400).json({ error }));
+          })
     })
     .catch((error) => {
       res.status(500).json({ error });
@@ -159,7 +161,9 @@ exports.bookRating = (req, res) => {
     //-On calcule la somme des notes, puis de la moyenne
     const totalRatings = book.ratings.length;
     const sumRatings = book.ratings.reduce((sum, rating) => sum + rating.grade, 0);
+    //console.log(sumRatings, totalRatings);
     const averageRating = sumRatings / totalRatings;
+    //console.log(averageRating);
 
     //-On met à jour la moyenne des notes dans le livre
     book.averageRating = averageRating;

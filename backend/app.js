@@ -6,8 +6,6 @@ const bodyParser = require('body-parser');
 const bookRoutes = require('./routes/bookRoutes');
 const userRoutes = require('./routes/userRoutes');
 app.use(express.json());
-app.use('/api/auth', userRoutes);
-app.use('/api/books', bookRoutes);
 
 require('dotenv').config();
 console.log(process.env);
@@ -26,6 +24,8 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   next();
 });
+app.use('/api/auth', userRoutes);
+app.use('/api/books', bookRoutes);
 
 function errorHandler ( req, res ) {
   if (res.headersSent) {
