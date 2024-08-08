@@ -82,17 +82,18 @@ exports.modifyBook = (req, res, next) => {
         return res.status(401).json({ message: 'Requête non autorisée !' });
       }
         //-Une fois les autorisations vérifiées, on sauvegarde les nouvelles informations du livre
-          const filename = book.imageUrl.split('/images/')[1];
+        Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
+        .then(() => {
           if (req.file) {
-          fs.unlink(`images/${filename}`, () => {
-            Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
-            .then(() => res.status(200).json({message: 'Livre modifié avec succès !'}))
-            .catch(error => res.status(400).json({ error }));
-          })} else {
-            Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
-            .then(() => res.status(200).json({message: 'Livre modifié avec succès !'}))
-            .catch(error => res.status(400).json({ error }));
+            const filename = book.imageUrl.split('/images/')[1];
+            fs.unlink(`images/${filename}`, () => {
+              res.status(200).json({message: 'Livre modifié avec succès !'})
+            })
+          } else {
+            res.status(200).json({message: 'Livre modifié avec succès !'})
           }
+        })
+        .catch(error => res.status(400).json({ error }));
     })
     .catch((error) => {
       res.status(500).json({ error });
