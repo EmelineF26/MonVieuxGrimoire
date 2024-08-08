@@ -142,28 +142,42 @@ exports.bestRatings = (req, res, next) => {
 exports.bookRating = (req, res) => {
   const { rating, userId } = req.body;
 
-  //console.log(rating);
+  //-On vérifie si le livre est présent dans la base de données
+  Book.findOne({ _id: req.params.id }).then((book) => {
+    if (!book) {
+      res.status(404).json({error: "Aucun livre n'a été trouvé"});
+    }
+
+  //-On vérifie si l'utilisateur a déjà noté ce livre
+  Book.findOne({ _id: req.params.id }).then((book) => {
+    //console.log(rating);
+    //console.log(book.ratings);
+
+    for (let userRate of book.ratings) {
+      //console.log('-----------------');
+      //console.log(userRate);
+      //console.log(userRate.userId);
+      //console.log(userId);
+      if (userRate.userId == userId) {
+        return res.status(400).json({ error: "L'utilisateur a déjà noté ce livre." });
+    }
+    }
+
+  //-On vérifie si la note entrée est correcte
   if (rating < 0 || rating > 5 || !Number.isInteger(rating)) {
     return res.status(400).json({ error: "La note n'est pas valide" });
   }
-
-  Book.findOne({ _id: req.params.id }).then((book) => {
-    if (!book) {
-      res.status(404).json({error: "Aucun livre n'a été trouvé"})
-    }
-    //-On ajoute la note à l'array rating
-    else {
-      book.ratings.push({
-        grade: rating,
-        userId: req.auth.userId,
-      });
-    }
+  //-On ajoute la note à l'array rating
+  else {
+    book.ratings.push({
+    grade: rating,
+    userId: req.auth.userId,
+    });
+  }
     //-On calcule la somme des notes, puis de la moyenne
     const totalRatings = book.ratings.length;
     const sumRatings = book.ratings.reduce((sum, rating) => sum + rating.grade, 0);
-    //console.log(sumRatings, totalRatings);
     const averageRating = sumRatings / totalRatings;
-    //console.log(averageRating);
 
     //-On met à jour la moyenne des notes dans le livre
     book.averageRating = averageRating;
@@ -171,10 +185,10 @@ exports.bookRating = (req, res) => {
     //-On sauvegarde les modifications dans la base de données
     book.save().then((updatedBook) => {
       res.status(200).json(updatedBook);
-    }).catch((error) => {
-      res.status(500).json({ error: "Erreur lors de la mise à jour du livre" });
-    });
-  }).catch((error) => {
-    res.status(500).json({ error: "Erreur lors de la recherche du livre" });
-  });
-};
+     })//.catch((error) => {
+    //   res.status(500).json({ error: "Erreur lors de la mise à jour du livre" });
+    // });
+   })//.catch((error) => {
+  //   res.status(500).json({ error: "Erreur lors de la recherche du livre" });
+  // });
+})};

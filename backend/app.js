@@ -26,6 +26,7 @@ app.use((req, res, next) => {
 });
 app.use('/api/auth', userRoutes);
 app.use('/api/books', bookRoutes);
+app.use('/images', express.static('images'));
 
 function errorHandler ( req, res ) {
   if (res.headersSent) {
