@@ -73,7 +73,7 @@ exports.modifyBook = (req, res, next) => {
     //-On recherche le livre demandé dans la base de données à l'aide de son ID
     Book.findOne({_id: req.params.id})
     .then((book) => {
-    //On vérifie que le livre existe bien dans la base de données
+    //-On vérifie que le livre existe bien dans la base de données
       if (!book) {
         return res.status(404).json({ message: 'Livre non trouvé !' });
       }
@@ -81,13 +81,18 @@ exports.modifyBook = (req, res, next) => {
       if (book.userId != req.auth.userId) {
         return res.status(401).json({ message: 'Requête non autorisée !' });
       }
-        //Une fois les autorisations vérifiées, on sauvegarde les nouvelles informations du livre
+        //-Une fois les autorisations vérifiées, on sauvegarde les nouvelles informations du livre
           const filename = book.imageUrl.split('/images/')[1];
+          if (req.file) {
           fs.unlink(`images/${filename}`, () => {
             Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
             .then(() => res.status(200).json({message: 'Livre modifié avec succès !'}))
             .catch(error => res.status(400).json({ error }));
-          })
+          })} else {
+            Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
+            .then(() => res.status(200).json({message: 'Livre modifié avec succès !'}))
+            .catch(error => res.status(400).json({ error }));
+          }
     })
     .catch((error) => {
       res.status(500).json({ error });
