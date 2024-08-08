@@ -8,7 +8,6 @@ const userRoutes = require('./routes/userRoutes');
 app.use(express.json());
 
 require('dotenv').config();
-console.log(process.env);
 
 //Connexion à MongoDB Atlas
 mongoose.connect('mongodb+srv://'+process.env.DB_USER+':'+process.env.DB_PASSWORD+'@'+process.env.DB_HOST,
