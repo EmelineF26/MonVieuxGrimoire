@@ -1,5 +1,6 @@
 const Book = require("../models/bookModel");
 const fs = require("fs");
+const mongoose = require('mongoose');
 const path = require("path");
 
 //- GET : Récupération de tous les livres
@@ -18,9 +19,7 @@ exports.getAllBooks = async (req, res) => {
 
 exports.createBook = async (req, res) => {
   if (!req.body.book || req.body.book === undefined || req.file === undefined) {
-    return res
-      .status(400)
-      .json({ error: "Les données du livre ne sont pas valides" });
+    return res.status(400).json({ error: "Les données du livre ne sont pas valides" });
   }
   //-On stocke la requête demandée sous format JSON
   const bookObject = JSON.parse(req.body.book);
@@ -38,7 +37,7 @@ exports.createBook = async (req, res) => {
   });
   //-On enregistre le livre créé dans la base de données
   try {
-    await book.save()
+    await book.save();
     res.status(201).json({ message: "Livre enregistré avec succès !" });
   } catch (error) {
     res.status(400).json({ error });
@@ -48,13 +47,19 @@ exports.createBook = async (req, res) => {
 //- GET : Récupération d'un livre
 
 exports.getOneBook = async (req, res) => {
+
+  //-On vérifie si l'ID du livre est valide
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ error: "Paramètre invalide !" });
+  }
+  
   try {
-    const book = await Book.findOne({ _id: req.params.id })
+    const book = await Book.findOne({ _id: req.params.id });
     if (book === null) {
       return res.status(404).json({ error: "Ce livre n'existe pas" });
     }
     res.status(200).json(book);
-  } catch (error) { 
+  } catch (error) {
     res.status(404).json({ error: "Ce livre n'existe pas" });
   }
 };
@@ -62,10 +67,13 @@ exports.getOneBook = async (req, res) => {
 //- PUT : Modification d'un livre
 
 exports.modifyBook = async (req, res) => {
-  if (
-    req.body.book === undefined &&
-    req.file === undefined &&
-    Object.keys(req.body).length === 0
+
+  //-On vérifie que l'ID donné est valide
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ error: "Paramètre invalide !" });
+  }
+
+  if ( req.body.book === undefined && req.file === undefined && Object.keys(req.body).length === 0
   ) {
     return res.status(400).json({ error: "Les modifications ne sont pas valides" });
   }
@@ -81,9 +89,15 @@ exports.modifyBook = async (req, res) => {
     : { ...req.body };
 
   delete bookObject._userId;
+
+  //-On vérifie si les données entrées sont valides
+  if (typeof bookObject.genre != 'string' || isNaN(bookObject.year)) {
+    return res.status(400).json({ error: "Les données fournies sont invalides" });
+  }
+
   //-On recherche le livre demandé dans la base de données à l'aide de son ID
-  try {
-    const book = await Book.findOne({ _id: req.params.id })
+  // try {
+    const book = await Book.findOne({ _id: req.params.id });
     //-On vérifie que le livre existe bien dans la base de données
     if (!book) {
       return res.status(404).json({ message: "Livre non trouvé !" });
@@ -98,26 +112,35 @@ exports.modifyBook = async (req, res) => {
     await Book.updateOne(
       { _id: req.params.id },
       { ...bookObject, _id: req.params.id }
-    )
-    if (req.file) {
-      const filename = book.imageUrl.split("/images/")[1];
-      fs.unlink(`images/${filename}`, () => {
-        res.status(200).json({ message: "Livre modifié avec succès !" });
-      });
-    } else {
-      res.status(200).json({ message: "Livre modifié avec succès !" });
+    );
+
+    if (!req.file) {
+      return res.status(200).json({ message: "Livre modifié avec succès !" });
     }
-  } catch (error) {
-    res.status(500).json({ error });
-  }
+
+    const filename = book.imageUrl.split("/images/")[1];
+    fs.unlink(`images/${filename}`, () => {
+      res.status(200).json({ message: "Livre modifié avec succès !" });
+    });
+  // } catch (error) {
+  //   res.status(500).json({ error });
+  // }
 };
 
 //- DELETE : Supression d'un livre
 
 exports.deleteBook = async (req, res) => {
+  //-On vérifie que l'ID du book est valide
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ error: "Paramètre invalide !" });
+  }
   //-On recherche à nouveau le livre demandé dans la base de données à l'aide de son ID
   try {
-    const book = await Book.findOne({ _id: req.params.id })
+    const book = await Book.findOne({ _id: req.params.id });
+    //-Si le livre n'est pas trouvé on renvoie une erreur 404
+    if (!book) {
+      return res.status(404).json({ error: "Ce livre n'existe pas" });
+    }
     //-On vérifie les autorisations de l'utilisateur connecté pour savoir si il peut supprimer le livre choisi
     if (book.userId != req.auth.userId) {
       return res.status(403).json({ message: "Requête non autorisée !" });
@@ -127,14 +150,14 @@ exports.deleteBook = async (req, res) => {
     fs.unlink(`images/${filename}`, async () => {
       //-Une fois les autorisations vérifiées, on supprime le livre
       try {
-        await Book.deleteOne({ _id: req.params.id })
+        await Book.deleteOne({ _id: req.params.id });
         res.status(200).json({ message: "Livre supprimé avec succès !" });
       } catch (error) {
         res.status(400).json({ error: "Impossible de supprimer ce livre" });
       }
     });
   } catch (error) {
-    res.status(404).json({ error: "Ce livre n'existe pas" });
+    res.status(500).json({ error: "Erreur lors de la suppression du livre !" });
   }
 };
 
@@ -142,16 +165,14 @@ exports.deleteBook = async (req, res) => {
 
 exports.bestRatings = async (req, res) => {
   try {
-    const books = await Book.find()
-      .sort({ averageRating: -1 })
-      .limit(3)
+    const books = await Book.find().sort({ averageRating: -1 }).limit(3);
     if (books.length === 0) {
-      //-Si on a pas de livres dans la base de données, on renvoie une erreur 400
-      return res.status(400).json({ error: "Aucun livre trouvé" });
+      //-Si on a pas de livres dans la base de données, on renvoie une erreur 404
+      return res.status(404).json({ error: "Aucun livre trouvé" });
     }
     res.status(200).json(books);
   } catch (error) {
-    res.status(500).json({ error })
+    res.status(500).json({ error });
   }
 };
 
@@ -160,9 +181,13 @@ exports.bestRatings = async (req, res) => {
 exports.bookRating = async (req, res) => {
   const { rating, userId } = req.body;
 
+    //-On vérifie si l'ID du livre est valide
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Paramètre invalide !" });
+    }
   //-On vérifie si le livre est présent dans la base de données
   try {
-    const book = await Book.findOne({ _id: req.params.id })
+    const book = await Book.findOne({ _id: req.params.id });
     if (!book) {
       res.status(404).json({ error: "Aucun livre n'a été trouvé" });
     }
@@ -170,10 +195,13 @@ exports.bookRating = async (req, res) => {
     //-On vérifie si l'utilisateur a déjà noté ce livre
     for (let userRate of book.ratings) {
       if (userRate.userId == userId) {
-        return res
-          .status(400)
-          .json({ error: "L'utilisateur a déjà noté ce livre." });
+        return res.status(409).json({ error: "L'utilisateur a déjà noté ce livre." });
       }
+    }
+
+    //-On vérifie si le userId de l'utilisateur entré est le bon
+    if (req.auth.userId != userId) {
+      return res.status(400).json({ error: "Requête invalide !" });
     }
 
     //-On vérifie si la note entrée est correcte
@@ -197,7 +225,7 @@ exports.bookRating = async (req, res) => {
     book.averageRating = averageRating;
 
     //-On sauvegarde les modifications dans la base de données
-    const updatedBook = await book.save()
+    const updatedBook = await book.save();
     res.status(200).json(updatedBook);
   } catch (error) {
     res.status(500).json({ error: "Erreur lors de la notation du livre" });
