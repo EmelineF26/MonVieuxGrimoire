@@ -96,7 +96,7 @@ exports.modifyBook = async (req, res) => {
   }
 
   //-On recherche le livre demandé dans la base de données à l'aide de son ID
-  // try {
+  try {
     const book = await Book.findOne({ _id: req.params.id });
     //-On vérifie que le livre existe bien dans la base de données
     if (!book) {
@@ -122,9 +122,9 @@ exports.modifyBook = async (req, res) => {
     fs.unlink(`images/${filename}`, () => {
       res.status(200).json({ message: "Livre modifié avec succès !" });
     });
-  // } catch (error) {
-  //   res.status(500).json({ error });
-  // }
+  } catch (error) {
+    res.status(500).json({ error });
+  }
 };
 
 //- DELETE : Supression d'un livre
