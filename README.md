@@ -18,3 +18,11 @@ Page d'ajout des livres :
 Page de connexion :
 ![page login](frontend/P7-Dev-Web-livres-main/imagesReadme/page%20login.jpg)
 
+
+# Setup
+
+Le frontend du projet peut être lancé à l'aide des commandes 
+
+`cd P7-Dev-Web-livres-main`, `npm install` et `npm start`
+
+Pour le backend, il faudra installer Nodemon.
